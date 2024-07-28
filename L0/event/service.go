@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/nats-io/nats.go"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -62,6 +63,7 @@ type Item struct {
 }
 
 type InMemoryStore struct {
+	mu     sync.Mutex
 	Orders map[string]Order
 }
 
@@ -71,10 +73,31 @@ func NewInMemoryStore() *InMemoryStore {
 	}
 }
 
-func (store *InMemoryStore) GetOrder(orderUID string) (Order, bool) {
-	print(len(store.Orders))
-	order, ok := store.Orders[orderUID]
-	return order, ok
+func (store *InMemoryStore) GetOrder(es *NatsEventStore) error {
+	sub, err := es.nc.Subscribe("order.got", func(msg *nats.Msg) {
+		orderID := string(msg.Data)
+		store.mu.Lock()
+		order, exists := store.Orders[orderID]
+		store.mu.Unlock()
+
+		var response []byte
+		if exists {
+			response, _ = json.Marshal(order)
+		} else {
+			response = []byte("{}")
+		}
+
+		err := es.nc.Publish(msg.Reply, response)
+		if err != nil {
+			log.Println("Failed to publish reply:", err)
+		}
+	})
+	if err != nil {
+		return err
+	}
+
+	es.orderCreatedSubscription = sub
+	return nil
 }
 
 func (store *InMemoryStore) AddOrder(es *NatsEventStore) error {
@@ -85,10 +108,9 @@ func (store *InMemoryStore) AddOrder(es *NatsEventStore) error {
 			log.Fatal(err)
 		}
 
-		log.Printf("Consumer  =>  Subject: %s  -  ID: %s\n", msg.Subject, order.OrderUID)
-		log.Print(order)
-
+		store.mu.Lock()
 		store.Orders[order.OrderUID] = order
+		store.mu.Unlock()
 		print(len(store.Orders))
 	})
 	if err != nil {
@@ -99,10 +121,10 @@ func (store *InMemoryStore) AddOrder(es *NatsEventStore) error {
 	return nil
 }
 
-func (store *InMemoryStore) getAllOrders() []Order {
+/*func (store *InMemoryStore) getAllOrders() []Order {
 	var orders []Order
 	for _, order := range store.Orders {
 		orders = append(orders, order)
 	}
 	return orders
-}
+}*/

@@ -32,7 +32,13 @@ func main() {
 		log.Println("Failed to subscribe to order creation events:", err)
 		return
 	}
-	http.HandleFunc("/order", event.GetOrderHandler(store))
+
+	err = store.GetOrder(es)
+	if err != nil {
+		log.Println("Failed to subscribe to get order requests:", err)
+		return
+	}
+	http.HandleFunc("/order", event.GetOrderHandler(es))
 	http.HandleFunc("/order/add", event.AddOrderHandler(es))
 	http.HandleFunc("/orders", event.GetAllOrdersHandler(store))
 

@@ -4,36 +4,35 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 )
 
-func GetOrderHandler(store *InMemoryStore) http.HandlerFunc {
+func GetOrderHandler(es *NatsEventStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Only GET method is allowed", http.StatusMethodNotAllowed)
+		orderID := r.URL.Query().Get("order_uid")
+		if orderID == "" {
+			http.Error(w, "Missing order ID", http.StatusBadRequest)
 			return
 		}
 
-		orderUID := r.URL.Query().Get("order_uid")
-		if orderUID == "" {
-			http.Error(w, "Missing order_uid parameter", http.StatusBadRequest)
-			return
-		}
-
-		order, ok := store.GetOrder(orderUID)
-		if !ok {
-			http.Error(w, "Order not found", http.StatusNotFound)
-			return
-		}
-
-		jsonData, err := json.Marshal(order)
+		msg, err := es.nc.Request("order.got", []byte(orderID), 5*time.Second)
 		if err != nil {
-			http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
+			http.Error(w, "Failed to get order", http.StatusInternalServerError)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
+		var order Order
+		err = json.Unmarshal(msg.Data, &order)
+		if err != nil {
+			http.Error(w, "Failed to decode order", http.StatusInternalServerError)
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
-		w.Write(jsonData)
+		err_ := json.NewEncoder(w).Encode(order)
+		if err_ != nil {
+			return
+		}
 	}
 }
 
@@ -55,16 +54,17 @@ func AddOrderHandler(es *NatsEventStore) http.HandlerFunc {
 			log.Println(err)
 			http.Error(w, "Failed to publish order", http.StatusInternalServerError)
 			return
-		} else {
-			log.Printf("Publisher  =>  Message: %s\n", order.OrderUID)
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(order)
+		err_ := json.NewEncoder(w).Encode(order)
+		if err_ != nil {
+			return
+		}
 	}
 }
 
-func GetAllOrdersHandler(store *InMemoryStore) http.HandlerFunc {
+/*func GetAllOrdersHandler(store *InMemoryStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, request *http.Request) {
 		orders := store.getAllOrders()
 		jsonData, err := json.Marshal(orders)
@@ -77,4 +77,4 @@ func GetAllOrdersHandler(store *InMemoryStore) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonData)
 	}
-}
+}*/
