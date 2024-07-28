@@ -85,7 +85,7 @@ func (store *InMemoryStore) GetOrder(es *NatsEventStore) error {
 		if exists {
 			response, _ = json.Marshal(order)
 		} else {
-			response = []byte("{}")
+			response = []byte("")
 		}
 
 		err := es.Nc.Publish(msg.Reply, response)

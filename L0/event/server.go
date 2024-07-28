@@ -10,6 +10,11 @@ import (
 
 func GetOrderHandler(es *NatsEventStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Only GET method is allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
 		orderID := r.URL.Query().Get(config.OrderID)
 		if orderID == "" {
 			http.Error(w, "Missing order ID", http.StatusBadRequest)
@@ -19,6 +24,11 @@ func GetOrderHandler(es *NatsEventStore) http.HandlerFunc {
 		msg, err := es.Nc.Request(config.PostCluster, []byte(orderID), 5*time.Second)
 		if err != nil {
 			http.Error(w, "Failed to get order", http.StatusInternalServerError)
+			return
+		}
+
+		if len(msg.Data) == 0 {
+			http.Error(w, "Order not found", http.StatusNotFound)
 			return
 		}
 
@@ -43,6 +53,7 @@ func AddOrderHandler(es *NatsEventStore) http.HandlerFunc {
 			http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
 			return
 		}
+
 		var order Order
 		if err := json.NewDecoder(r.Body).Decode(&order); err != nil {
 			http.Error(w, "Invalid request payload", http.StatusBadRequest)
@@ -64,6 +75,8 @@ func AddOrderHandler(es *NatsEventStore) http.HandlerFunc {
 		}
 	}
 }
+
+func RestoreDBCache() {}
 
 /*func GetAllOrdersHandler(store *InMemoryStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, request *http.Request) {

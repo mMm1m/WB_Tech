@@ -14,5 +14,5 @@ type OrderCreatedMessage struct {
 }
 
 func (m *OrderCreatedMessage) Key() string {
-	return config.GetCluster
+	return config.MsgCreated
 }
