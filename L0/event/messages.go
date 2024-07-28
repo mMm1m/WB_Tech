@@ -1,5 +1,9 @@
 package event
 
+import (
+	"L0/config"
+)
+
 type Message interface {
 	Key() string
 }
@@ -10,5 +14,5 @@ type OrderCreatedMessage struct {
 }
 
 func (m *OrderCreatedMessage) Key() string {
-	return "message created"
+	return config.GetCluster
 }

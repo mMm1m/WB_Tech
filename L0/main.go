@@ -2,7 +2,6 @@ package main
 
 import (
 	"L0/event"
-	_ "fmt"
 	"github.com/nats-io/nats.go"
 	"log"
 	"net/http"
@@ -16,8 +15,6 @@ import (
 // подумать как ограничить объекты , входящие в канал (хитрая организация интерфйесов)
 
 func main() {
-	log.Println("Starting...")
-
 	es, err := event.NewNats(nats.DefaultURL)
 	if err != nil {
 		log.Println(err)
@@ -40,7 +37,7 @@ func main() {
 	}
 	http.HandleFunc("/order", event.GetOrderHandler(es))
 	http.HandleFunc("/order/add", event.AddOrderHandler(es))
-	http.HandleFunc("/orders", event.GetAllOrdersHandler(store))
+	//http.HandleFunc("/orders", event.GetAllOrdersHandler(store))
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

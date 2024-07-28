@@ -1,6 +1,7 @@
 package event
 
 import (
+	"L0/config"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -9,13 +10,13 @@ import (
 
 func GetOrderHandler(es *NatsEventStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		orderID := r.URL.Query().Get("order_uid")
+		orderID := r.URL.Query().Get(config.OrderID)
 		if orderID == "" {
 			http.Error(w, "Missing order ID", http.StatusBadRequest)
 			return
 		}
 
-		msg, err := es.nc.Request("order.got", []byte(orderID), 5*time.Second)
+		msg, err := es.Nc.Request(config.PostCluster, []byte(orderID), 5*time.Second)
 		if err != nil {
 			http.Error(w, "Failed to get order", http.StatusInternalServerError)
 			return
@@ -49,7 +50,7 @@ func AddOrderHandler(es *NatsEventStore) http.HandlerFunc {
 		}
 
 		msg, _ := json.Marshal(order)
-		err := es.nc.Publish("order.created", msg)
+		err := es.Nc.Publish(config.GetCluster, msg)
 		if err != nil {
 			log.Println(err)
 			http.Error(w, "Failed to publish order", http.StatusInternalServerError)

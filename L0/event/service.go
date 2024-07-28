@@ -1,6 +1,7 @@
 package event
 
 import (
+	"L0/config"
 	"encoding/json"
 	"github.com/nats-io/nats.go"
 	"log"
@@ -74,7 +75,7 @@ func NewInMemoryStore() *InMemoryStore {
 }
 
 func (store *InMemoryStore) GetOrder(es *NatsEventStore) error {
-	sub, err := es.nc.Subscribe("order.got", func(msg *nats.Msg) {
+	sub, err := es.Nc.Subscribe(config.PostCluster, func(msg *nats.Msg) {
 		orderID := string(msg.Data)
 		store.mu.Lock()
 		order, exists := store.Orders[orderID]
@@ -87,7 +88,7 @@ func (store *InMemoryStore) GetOrder(es *NatsEventStore) error {
 			response = []byte("{}")
 		}
 
-		err := es.nc.Publish(msg.Reply, response)
+		err := es.Nc.Publish(msg.Reply, response)
 		if err != nil {
 			log.Println("Failed to publish reply:", err)
 		}
@@ -96,12 +97,12 @@ func (store *InMemoryStore) GetOrder(es *NatsEventStore) error {
 		return err
 	}
 
-	es.orderCreatedSubscription = sub
+	es.OrderCreatedSubscription = sub
 	return nil
 }
 
 func (store *InMemoryStore) AddOrder(es *NatsEventStore) error {
-	sub, err := es.nc.Subscribe("order.created", func(msg *nats.Msg) {
+	sub, err := es.Nc.Subscribe(config.GetCluster, func(msg *nats.Msg) {
 		var order Order
 		err := json.Unmarshal(msg.Data, &order)
 		if err != nil {
@@ -111,13 +112,12 @@ func (store *InMemoryStore) AddOrder(es *NatsEventStore) error {
 		store.mu.Lock()
 		store.Orders[order.OrderUID] = order
 		store.mu.Unlock()
-		print(len(store.Orders))
 	})
 	if err != nil {
 		return err
 	}
 
-	es.orderCreatedSubscription = sub
+	es.OrderCreatedSubscription = sub
 	return nil
 }
 

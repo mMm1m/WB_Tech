@@ -6,8 +6,8 @@ import (
 )
 
 type NatsEventStore struct {
-	nc                       *nats.Conn
-	orderCreatedSubscription *nats.Subscription
+	Nc                       *nats.Conn
+	OrderCreatedSubscription *nats.Subscription
 	orderCreatedChan         chan OrderCreatedMessage
 }
 
@@ -16,16 +16,15 @@ func NewNats(url string) (*NatsEventStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &NatsEventStore{nc: nc}, nil
+	return &NatsEventStore{Nc: nc}, nil
 }
 
-// Close закрывает соединение и отписывается от событий
 func (es *NatsEventStore) Close() {
-	if es.nc != nil {
-		es.nc.Close()
+	if es.Nc != nil {
+		es.Nc.Close()
 	}
-	if es.orderCreatedSubscription != nil {
-		if err := es.orderCreatedSubscription.Unsubscribe(); err != nil {
+	if es.OrderCreatedSubscription != nil {
+		if err := es.OrderCreatedSubscription.Unsubscribe(); err != nil {
 			log.Fatal(err)
 		}
 	}
