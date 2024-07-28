@@ -1,21 +1,40 @@
 package main
 
 import (
+	"L0/event"
+	_ "fmt"
+	"github.com/nats-io/nats.go"
+	"log"
 	"net/http"
 )
 
-var (
-	store = NewInMemoryStore()
-)
+// общие мысли: организовать параллельный вызов обрабатываемых сервером функций и в принципе
+// распараллелить все необходимые процессы
+
+// client (?)
+// "простейший интерфейс" - какая-нибудь html-ка XD
+// подумать как ограничить объекты , входящие в канал (хитрая организация интерфйесов)
 
 func main() {
-	// HTTP handler для GET запроса
-	http.HandleFunc("/order", GetOrderHandler)
-	// HTTP handler для POST запроса
-	http.HandleFunc("/add", AddOrderHandler)
-	// Запуск HTTP сервера на порту 8080
-	err := http.ListenAndServe(":8080", nil)
+	log.Println("Starting...")
+
+	es, err := event.NewNats(nats.DefaultURL)
 	if err != nil {
-		// handle error
+		log.Println(err)
+		return
 	}
+	defer es.Close()
+
+	store := &event.InMemoryStore{Orders: make(map[string]event.Order)}
+
+	err = store.AddOrder(es)
+	if err != nil {
+		log.Println("Failed to subscribe to order creation events:", err)
+		return
+	}
+	http.HandleFunc("/order", event.GetOrderHandler(store))
+	http.HandleFunc("/order/add", event.AddOrderHandler(es))
+	http.HandleFunc("/orders", event.GetAllOrdersHandler(store))
+
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
