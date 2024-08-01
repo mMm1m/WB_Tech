@@ -2,6 +2,7 @@ package event
 
 import (
 	"L0/config"
+	"L0/schema"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -14,7 +15,7 @@ func GetOrderHandler(es *NatsEventStore) http.HandlerFunc {
 			http.Error(w, "Only GET method is allowed", http.StatusMethodNotAllowed)
 			return
 		}
-
+		//fmt.Print(idealJSONFields)
 		orderID := r.URL.Query().Get(config.OrderID)
 		if orderID == "" {
 			http.Error(w, "Missing order ID", http.StatusBadRequest)
@@ -32,7 +33,7 @@ func GetOrderHandler(es *NatsEventStore) http.HandlerFunc {
 			return
 		}
 
-		var order Order
+		var order schema.Order
 		err = json.Unmarshal(msg.Data, &order)
 		if err != nil {
 			http.Error(w, "Failed to decode order", http.StatusInternalServerError)
@@ -53,8 +54,7 @@ func AddOrderHandler(es *NatsEventStore) http.HandlerFunc {
 			http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
 			return
 		}
-
-		var order Order
+		var order schema.Order
 		if err := json.NewDecoder(r.Body).Decode(&order); err != nil {
 			http.Error(w, "Invalid request payload", http.StatusBadRequest)
 			return

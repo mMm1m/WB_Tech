@@ -2,6 +2,7 @@ package event
 
 import (
 	"L0/config"
+	"L0/schema"
 )
 
 type Message interface {
@@ -10,7 +11,7 @@ type Message interface {
 
 type OrderCreatedMessage struct {
 	ID   string
-	Body Order
+	Body schema.Order
 }
 
 func (m *OrderCreatedMessage) Key() string {
