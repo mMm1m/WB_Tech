@@ -2,9 +2,9 @@ package event
 
 import (
 	"L0/config"
+	"L0/db"
 	"L0/schema"
 	"encoding/json"
-	"fmt"
 	"github.com/nats-io/nats.go"
 	"log"
 	"sync"
@@ -23,7 +23,7 @@ func NewInMemoryStore() *InMemoryStore {
 
 func (store *InMemoryStore) GetOrder(es *NatsEventStore) error {
 	sub, err := es.Nc.Subscribe(config.PostCluster, func(msg *nats.Msg) {
-		fmt.Println(len(store.Orders))
+		restoreDBCache(store)
 		orderID := string(msg.Data)
 		store.mu.Lock()
 		order, exists := store.Orders[orderID]
@@ -51,12 +51,17 @@ func (store *InMemoryStore) GetOrder(es *NatsEventStore) error {
 
 func (store *InMemoryStore) AddOrder(es *NatsEventStore) error {
 	sub, err := es.Nc.Subscribe(config.GetCluster, func(msg *nats.Msg) {
+		restoreDBCache(store)
 		var order schema.Order
 		err := json.Unmarshal(msg.Data, &order)
 		if err != nil {
 			log.Fatal(err)
 		}
 
+		ok, err_ := db.AlreadyExists(order)
+		if err_ != nil && ok == true {
+			db.InsertOrder(order)
+		}
 		store.mu.Lock()
 		store.Orders[order.OrderUID] = order
 		store.mu.Unlock()
@@ -69,10 +74,11 @@ func (store *InMemoryStore) AddOrder(es *NatsEventStore) error {
 	return nil
 }
 
-/*func (store *InMemoryStore) getAllOrders() []Order {
-	var orders []Order
-	for _, order := range store.Orders {
-		orders = append(orders, order)
+func restoreDBCache(store *InMemoryStore) {
+	allOrders, _ := db.GetAllOrders()
+	if len(allOrders) != len(store.Orders) {
+		for _, order := range allOrders {
+			store.Orders[order.OrderUID] = order
+		}
 	}
-	return orders
-}*/
+}

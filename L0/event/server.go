@@ -75,20 +75,3 @@ func AddOrderHandler(es *NatsEventStore) http.HandlerFunc {
 		}
 	}
 }
-
-func RestoreDBCache() {}
-
-/*func GetAllOrdersHandler(store *InMemoryStore) http.HandlerFunc {
-	return func(w http.ResponseWriter, request *http.Request) {
-		orders := store.getAllOrders()
-		jsonData, err := json.Marshal(orders)
-		if err != nil {
-			http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(jsonData)
-	}
-}*/
