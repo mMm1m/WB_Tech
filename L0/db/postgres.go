@@ -15,7 +15,7 @@ type PostgresRepository struct {
 }
 
 func NewPostgres() (*PostgresRepository, error) {
-	dsn := "host=localhost user=max_db password=max_db dbname=golang_base port=5433"
+	dsn := "host=localhost user=max_db password=max_db dbname=golang_base port=5432"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Ошибка при подключении к базе данных:", err)
